@@ -38,6 +38,12 @@ impl Value {
     pub fn data(&self) -> f64 {
         self.inner.borrow().data
     }
+
+    pub fn grad(&self) -> f64 {
+        self.inner.borrow().grad
+    }
+
+    pub fn backward(&mut self) {}
 }
 
 impl Add for Value {
@@ -102,7 +108,23 @@ mod tests {
         let d = a.clone() * b.clone();
         let e = d + c.clone();
         let f = Value::new(2.0);
-        let l = e * f; // L = (a * b + c) * f = (2 * 3 + 10) * 2 = 32
+        let mut l = e * f.clone(); // L = (a * b + c) * f = (2 * 3 + 10) * 2 = 32
         assert_eq!(l.data(), 32.0);
+
+        l.backward();
+
+        // dL/dl = 1
+        // dL/df = e = 16
+        // dL/de = f = 2
+        // dL/dc = dL/de * 1 = 2
+        // dL/dd = dL/de * 1 = 2
+        // dL/da = dL/dd * b = 2 * 3 = 6
+        // dL/db = dL/dd * a = 2 * 2 = 4
+
+        assert_eq!(l.data(), 32.0);
+        assert_eq!(a.grad(), 6.0);
+        assert_eq!(b.grad(), 4.0);
+        assert_eq!(c.grad(), 2.0);
+        assert_eq!(f.grad(), 16.0);
     }
 }
