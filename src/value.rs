@@ -198,5 +198,10 @@ mod tests {
         let mut b = a.clone() + a.clone();
         b.backward();
         assert_eq!(a.grad(), 2.0);
+
+        let a = Value::new(2.0);
+        let mut b = a.clone() * a.clone();
+        b.backward();
+        assert_eq!(a.grad(), 4.0);
     }
 }
