@@ -37,8 +37,7 @@ impl Value {
         }
     }
 
-    pub fn with_op(data: f64, op: String, lhs: Value, rhs: Value) -> Self {
-        let prevs = vec![lhs, rhs];
+    pub fn with_op(data: f64, op: String, prevs: Vec<Value>) -> Self {
         let val_inner = ValueInner {
             data,
             grad: 0f64,
@@ -62,18 +61,28 @@ impl Value {
 
     pub fn pow(self, other: f64) -> Self {
         let self_data = self.inner.borrow().data;
-        let out_val = Value::with_op(
-            self_data.powf(other),
-            "pow".into(),
-            self.clone(),
-            Value::new(other),
-        );
+        let out_val = Value::with_op(self_data.powf(other), "pow".into(), vec![self.clone()]);
 
         let out_weak = Rc::downgrade(&out_val.inner);
         out_val.inner.borrow_mut().backward = Box::new(move || {
             if let Some(o) = out_weak.upgrade() {
                 let grad = o.borrow().grad;
                 self.inner.borrow_mut().grad += other * self_data.powf(other - 1f64) * grad;
+            }
+        });
+
+        out_val
+    }
+
+    pub fn exp(self) -> Self {
+        let self_data = self.inner.borrow().data;
+        let out_val = Value::with_op(self_data.exp(), "exp".into(), vec![self.clone()]);
+
+        let out_weak = Rc::downgrade(&out_val.inner);
+        out_val.inner.borrow_mut().backward = Box::new(move || {
+            if let Some(o) = out_weak.upgrade() {
+                let grad = o.borrow().grad;
+                self.inner.borrow_mut().grad += self_data.exp() * grad;
             }
         });
 
@@ -116,8 +125,7 @@ impl Add for Value {
         let out_val = Value::with_op(
             self_data + other_data,
             "+".into(),
-            self.clone(),
-            other.clone(),
+            vec![self.clone(), other.clone()],
         );
 
         let out_weak = Rc::downgrade(&out_val.inner);
@@ -141,8 +149,7 @@ impl Mul for Value {
         let out_val = Value::with_op(
             self_data * other_data,
             "*".into(),
-            self.clone(),
-            other.clone(),
+            vec![self.clone(), other.clone()],
         );
 
         let out_weak = Rc::downgrade(&out_val.inner);
@@ -193,6 +200,29 @@ mod tests {
 
     #[test]
     fn test1() {
+        let a = Value::new(2.0);
+        let mut b = a.clone() + a.clone();
+        b.backward();
+        assert_eq!(a.grad(), 2.0);
+
+        let a = Value::new(2.0);
+        let mut b = a.clone() * a.clone();
+        b.backward();
+        assert_eq!(a.grad(), 4.0);
+
+        let a = Value::new(2.0);
+        let mut b = a.clone().pow(3.0);
+        b.backward();
+        assert_eq!(a.grad(), 12.0);
+
+        let a = Value::new(3.0);
+        let mut b = a.clone().exp();
+        b.backward();
+        assert_eq!(a.grad(), 3f64.exp());
+    }
+
+    #[test]
+    fn test2() {
         // L = (a * b + c) * f + a = (2 * 3 + 10) * 2 + 2 = 34
         let a = Value::new(2.0);
         let b = Value::new(3.0);
@@ -219,20 +249,5 @@ mod tests {
         assert_eq!(b.grad(), 4.0);
         assert_eq!(c.grad(), 2.0);
         assert_eq!(f.grad(), 16.0);
-
-        let a = Value::new(2.0);
-        let mut b = a.clone() + a.clone();
-        b.backward();
-        assert_eq!(a.grad(), 2.0);
-
-        let a = Value::new(2.0);
-        let mut b = a.clone() * a.clone();
-        b.backward();
-        assert_eq!(a.grad(), 4.0);
-
-        let a = Value::new(2.0);
-        let mut b = a.clone().pow(3.0);
-        b.backward();
-        assert_eq!(a.grad(), 12.0);
     }
 }
