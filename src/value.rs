@@ -60,6 +60,26 @@ impl Value {
         self.inner.borrow().grad
     }
 
+    pub fn pow(self, other: f64) -> Self {
+        let self_data = self.inner.borrow().data;
+        let out_val = Value::with_op(
+            self_data.powf(other),
+            "pow".into(),
+            self.clone(),
+            Value::new(other),
+        );
+
+        let out_weak = Rc::downgrade(&out_val.inner);
+        out_val.inner.borrow_mut().backward = Box::new(move || {
+            if let Some(o) = out_weak.upgrade() {
+                let grad = o.borrow().grad;
+                self.inner.borrow_mut().grad += other * self_data.powf(other - 1f64) * grad;
+            }
+        });
+
+        out_val
+    }
+
     pub fn backward(&mut self) {
         let mut visited: HashSet<usize> = HashSet::with_capacity(16);
         let mut sorted_values: Vec<Value> = Vec::with_capacity(16);
@@ -209,5 +229,10 @@ mod tests {
         let mut b = a.clone() * a.clone();
         b.backward();
         assert_eq!(a.grad(), 4.0);
+
+        let a = Value::new(2.0);
+        let mut b = a.clone().pow(3.0);
+        b.backward();
+        assert_eq!(a.grad(), 12.0);
     }
 }
