@@ -68,6 +68,8 @@ impl Value {
 
         self.inner.borrow_mut().grad = 1f64;
         for val in sorted_values.into_iter().rev() {
+            // 对inner的借用会持续到闭包调用完成，闭包如果会修改当前节点自己（目前不会）则需要用Rc
+            // clone出闭包后结束借用再调用
             (val.inner.borrow().backward)();
         }
     }
@@ -98,11 +100,13 @@ impl Add for Value {
             other.clone(),
         );
 
-        let out_weak = out_val.clone();
+        let out_weak = Rc::downgrade(&out_val.inner);
         out_val.inner.borrow_mut().backward = Box::new(move || {
-            let out_grad = out_weak.grad();
-            self.inner.borrow_mut().grad += out_grad;
-            other.inner.borrow_mut().grad += out_grad;
+            if let Some(up_value) = out_weak.upgrade() {
+                let out_grad = up_value.borrow().grad;
+                self.inner.borrow_mut().grad += out_grad;
+                other.inner.borrow_mut().grad += out_grad;
+            }
         });
 
         out_val
@@ -121,11 +125,13 @@ impl Mul for Value {
             other.clone(),
         );
 
-        let out_weak = out_val.clone();
+        let out_weak = Rc::downgrade(&out_val.inner);
         out_val.inner.borrow_mut().backward = Box::new(move || {
-            let out_grad = out_weak.grad();
-            self.inner.borrow_mut().grad += out_grad * other_data;
-            other.inner.borrow_mut().grad += out_grad * self_data;
+            if let Some(up_value) = out_weak.upgrade() {
+                let out_grad = up_value.borrow().grad;
+                self.inner.borrow_mut().grad += out_grad * other_data;
+                other.inner.borrow_mut().grad += out_grad * self_data;
+            }
         });
 
         out_val
