@@ -74,8 +74,6 @@ impl MLP {
 
         cur
     }
-
-    pub fn zero_grad(&mut self) {}
 }
 
 impl Module for MLP {
