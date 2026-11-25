@@ -110,7 +110,7 @@ impl Value {
         out_val
     }
 
-    pub fn backward(&mut self) {
+    pub fn backward(&self) {
         let mut visited: HashSet<usize> = HashSet::with_capacity(16);
         let mut sorted_values: Vec<Value> = Vec::with_capacity(16);
 
@@ -222,22 +222,22 @@ mod tests {
     #[test]
     fn test1() {
         let a = Value::new(2.0);
-        let mut b = a.clone() + a.clone();
+        let b = a.clone() + a.clone();
         b.backward();
         assert_eq!(a.grad(), 2.0);
 
         let a = Value::new(2.0);
-        let mut b = a.clone() * a.clone();
+        let b = a.clone() * a.clone();
         b.backward();
         assert_eq!(a.grad(), 4.0);
 
         let a = Value::new(2.0);
-        let mut b = a.clone().pow(3.0);
+        let b = a.clone().pow(3.0);
         b.backward();
         assert_eq!(a.grad(), 12.0);
 
         let a = Value::new(3.0);
-        let mut b = a.clone().exp();
+        let b = a.clone().exp();
         b.backward();
         assert_eq!(a.grad(), 3f64.exp());
     }
@@ -252,7 +252,7 @@ mod tests {
         let e = d + c.clone();
         let f = Value::new(2.0);
         let g = e * f.clone();
-        let mut l = g + a.clone();
+        let l = g + a.clone();
         assert_eq!(l.data(), 34.0);
 
         // dL/dl = 1

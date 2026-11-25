@@ -3,11 +3,21 @@ mod mlp;
 use crate::Value;
 pub use mlp::{Layer, MLP};
 
+pub trait Module {
+    fn parameters(&self) -> Vec<Value>;
+    fn zero_grad(&self) {
+        for p in self.parameters() {
+            p.set_grad(0.0);
+        }
+    }
+}
+
 /// 神经元节点
 pub struct Neuron {
     pub weights: Vec<Value>, // 权重
     pub b: Value,            // 偏置
     pub nonline: bool,       // 非线性激活函数
+    pub param_size: usize,   // 参数个数
 }
 
 impl Neuron {
@@ -26,6 +36,7 @@ impl Neuron {
             weights,
             b,
             nonline,
+            param_size: nin + 1,
         }
     }
 
@@ -37,5 +48,13 @@ impl Neuron {
         }
 
         if self.nonline { act.relu() } else { act }
+    }
+}
+
+impl Module for Neuron {
+    fn parameters(&self) -> Vec<Value> {
+        let mut params = self.weights.clone();
+        params.push(self.b.clone());
+        params
     }
 }
