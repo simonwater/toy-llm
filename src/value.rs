@@ -59,6 +59,10 @@ impl Value {
         self.inner.borrow().grad
     }
 
+    pub fn set_grad(&self, grad: f64) {
+        self.inner.borrow_mut().grad = grad;
+    }
+
     pub fn pow(self, other: f64) -> Self {
         let self_data = self.inner.borrow().data;
         let out_val = Value::with_op(self_data.powf(other), "pow".into(), vec![self.clone()]);
@@ -86,6 +90,23 @@ impl Value {
             }
         });
 
+        out_val
+    }
+
+    pub fn relu(self) -> Self {
+        let self_data = self.inner.borrow().data;
+        let out_data = if self_data < 0.0 { 0.0 } else { self_data };
+        let out_val = Value::with_op(out_data, "ReLU".into(), vec![self.clone()]);
+
+        let out_weak = Rc::downgrade(&out_val.inner);
+        out_val.inner.borrow_mut().backward = Box::new(move || {
+            if out_data > 0.0
+                && let Some(o) = out_weak.upgrade()
+            {
+                let grad = o.borrow().grad;
+                self.inner.borrow_mut().grad += grad;
+            }
+        });
         out_val
     }
 
