@@ -6,7 +6,7 @@ pub use mlp::{Layer, MLP};
 pub trait Module {
     fn parameters(&self) -> Vec<Value>;
     fn zero_grad(&self) {
-        for p in self.parameters() {
+        for p in &self.parameters() {
             p.set_grad(0.0);
         }
     }
@@ -53,5 +53,18 @@ impl Module for Neuron {
         let mut params = self.weights.clone();
         params.push(self.b.clone());
         params
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn neuron_test() {
+        let n = Neuron::new(2, false, &mut 40);
+        let x = vec![Value::new(2.0), Value::new(3.0)];
+        let y = n.forward(&x);
+        println!("{}", y.data());
     }
 }

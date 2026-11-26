@@ -74,6 +74,12 @@ impl MLP {
 
         cur
     }
+
+    pub fn forward_one(&self, inputs: &[Value]) -> Value {
+        let out = self.forward(inputs);
+        assert_eq!(out.len(), 1);
+        out[0].clone()
+    }
 }
 
 impl Module for MLP {
@@ -99,7 +105,7 @@ mod tests {
         let x = vec![Value::new(2.0), Value::new(3.0), Value::new(-1.0)];
         let outs = mlp.forward(&x);
         let out = outs.first().expect("感知机结构不合法");
-        println!("out value: {}", out.data());
+        println!("outputs: {:?}", outs);
 
         // 重置所有参数梯度
         mlp.zero_grad();
@@ -111,5 +117,56 @@ mod tests {
         out.backward();
         let zero_grad_cnt = params.iter().filter(|p| p.grad() == 0.0).count();
         assert_eq!(zero_grad_cnt, 0);
+    }
+
+    #[test]
+    fn test_multi_inputs() {
+        let xs = vec![
+            vec![Value::new(2.0), Value::new(3.0), Value::new(-1.0)],
+            vec![Value::new(3.0), Value::new(1.0), Value::new(0.5)],
+            vec![Value::new(0.5), Value::new(1.0), Value::new(1.0)],
+            vec![Value::new(1.0), Value::new(1.0), Value::new(-1.0)],
+        ];
+        // 真实值
+        let ys = vec![
+            Value::new(1.0),
+            Value::new(-1.0),
+            Value::new(-1.0),
+            Value::new(1.0),
+        ];
+
+        let mlp = MLP::new(3, &[4, 4, 1], &mut 42);
+        let parameters = mlp.parameters();
+
+        for i in 1..=20 {
+            println!("first p: {:?}", parameters[0]);
+            // 预测值
+            let mut ypreds = Vec::<Value>::with_capacity(xs.len());
+            for x in &xs {
+                let ypred = mlp.forward_one(x);
+                ypreds.push(ypred);
+            }
+            // 损失值
+            let mut loss = Value::new(0.0);
+            for (y, ypred) in ys.iter().zip(ypreds.iter()) {
+                loss = loss + (y.clone() - ypred.clone()).pow(2.0);
+            }
+            println!("{}.loss: {}", i, loss);
+
+            // 反向传播计算梯度
+            mlp.zero_grad();
+            loss.backward();
+
+            // 梯度法更新参数
+            for p in parameters.iter() {
+                let d = p.data() - 0.01 * p.grad();
+                p.set_data(d);
+            }
+            println!()
+        }
+
+        let ypred: Vec<Value> = xs.iter().map(|x| mlp.forward_one(x)).collect();
+        println!();
+        println!("pred: {:?}", ypred);
     }
 }

@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
+use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
 use std::rc::Rc;
 use std::vec;
@@ -53,6 +54,10 @@ impl Value {
 
     pub fn data(&self) -> f64 {
         self.inner.borrow().data
+    }
+
+    pub fn set_data(&self, data: f64) {
+        self.inner.borrow_mut().data = data;
     }
 
     pub fn grad(&self) -> f64 {
@@ -212,6 +217,19 @@ impl Mul<f64> for Value {
     type Output = Value;
     fn mul(self, other: f64) -> Value {
         self * Value::new(other)
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data())
+    }
+}
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let inner = self.inner.borrow();
+        write!(f, "Value(data={}, grad={})", inner.data, inner.grad)
     }
 }
 
