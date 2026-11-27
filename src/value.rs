@@ -115,6 +115,21 @@ impl Value {
         out_val
     }
 
+    pub fn tanh(self) -> Self {
+        let self_data = self.inner.borrow().data;
+        let out_data = self_data.tanh();
+        let out_val = Value::with_op(out_data, "tanh".into(), vec![self.clone()]);
+
+        let out_weak = Rc::downgrade(&out_val.inner);
+        out_val.inner.borrow_mut().backward = Box::new(move || {
+            if let Some(o) = out_weak.upgrade() {
+                let grad = o.borrow().grad;
+                self.inner.borrow_mut().grad += (1.0 - out_data * out_data) * grad;
+            }
+        });
+        out_val
+    }
+
     pub fn backward(&self) {
         let mut visited: HashSet<usize> = HashSet::with_capacity(16);
         let mut sorted_values: Vec<Value> = Vec::with_capacity(16);

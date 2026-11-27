@@ -138,8 +138,10 @@ mod tests {
         let mlp = MLP::new(3, &[4, 4, 1], &mut 42);
         let parameters = mlp.parameters();
 
+        // 开始训练
         for i in 1..=20 {
-            println!("first p: {:?}", parameters[0]);
+            println!("[step:{}]", i);
+            println!("parameter 1: {:?}", parameters[0]);
             // 预测值
             let mut ypreds = Vec::<Value>::with_capacity(xs.len());
             for x in &xs {
@@ -151,7 +153,7 @@ mod tests {
             for (y, ypred) in ys.iter().zip(ypreds.iter()) {
                 loss = loss + (y.clone() - ypred.clone()).pow(2.0);
             }
-            println!("{}.loss: {}", i, loss);
+            println!("loss: {}", loss);
 
             // 反向传播计算梯度
             mlp.zero_grad();
@@ -159,14 +161,14 @@ mod tests {
 
             // 梯度法更新参数
             for p in parameters.iter() {
-                let d = p.data() - 0.01 * p.grad();
+                let d = p.data() - 0.1 * p.grad();
                 p.set_data(d);
             }
             println!()
         }
 
+        // 进行预测
         let ypred: Vec<Value> = xs.iter().map(|x| mlp.forward_one(x)).collect();
-        println!();
         println!("pred: {:?}", ypred);
     }
 }

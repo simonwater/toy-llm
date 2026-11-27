@@ -44,7 +44,7 @@ impl Neuron {
             act = act + w.clone() * x.clone();
         }
 
-        if self.nonline { act.relu() } else { act }
+        if self.nonline { act.tanh() } else { act }
     }
 }
 
